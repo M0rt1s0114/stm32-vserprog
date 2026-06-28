@@ -1,0 +1,48 @@
+name: Build firmware
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:      # 允许手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        # 你可以在这里列出所有想编译的板子名称（对应 boards/ 下的头文件）
+        board:
+          - stm32-vserprog-v2
+          - stm32-vserprog-v3
+          - xtw100
+          - stm32-bluepill
+          - stm32-bluepill-invled
+          
+
+    steps:
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v7
+        with:
+          submodules: true   # 自动拉取 libopencm3
+
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi
+
+      - name: Build firmware
+        run: make BOARD=${{ matrix.board }}
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: firmware-${{ matrix.board }}
+          # 根据 Makefile 可能生成 .bin, .elf, .hex 等，视实际情况调整通配符
+          path: |
+            *.bin
+            *.elf
+            *.hex
+          if-no-files-found: ignore
